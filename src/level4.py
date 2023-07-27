@@ -38,6 +38,7 @@ class CSP(Generic[V, D]):
         self.variables: List[V] = variables
         self.domains: Dict[V, List[D]] = domains
         self.constraints: Dict[V, List[Constraint[V, D]]] = {}
+        self.satisfied_constraints: Dict[V, List[Constraint[V, D]]] = {}  # Store satisfied constraints
 
         # Initialize constraints for each variable
         for variable in self.variables:
@@ -61,8 +62,10 @@ class CSP(Generic[V, D]):
         for the given variable against it.
         """
         for constraint in self.constraints[variable]:
-            if not constraint.satisfied(assignment):
-                return False
+            if constraint not in self.satisfied_constraints.get(variable, []):
+                if not constraint.satisfied(assignment):
+                    return False
+                self.satisfied_constraints.setdefault(variable, []).append(constraint)
         return True
 
     def backtracking_search(self, assignment: Dict[V, D] = {}) -> Optional[Dict[V, D]]:
@@ -82,7 +85,7 @@ class CSP(Generic[V, D]):
                 continue
 
             local_assignment[first] = value
-            # print(local_assignment)
+
             if self.consistent(first, local_assignment):
                 result: Optional[Dict[V, D]] = self.backtracking_search(local_assignment)
 
@@ -90,6 +93,7 @@ class CSP(Generic[V, D]):
                     return result
 
         return None
+
 
 class CustomConstraint(Constraint[str, int]):
     """
@@ -102,18 +106,6 @@ class CustomConstraint(Constraint[str, int]):
         self.letters: List[str] = extract_unique_letters(equation)
         super().__init__(self.letters)
         self.equation = equation
-
-    def replace_characters(self, input_string, char_dict):
-        """
-        Replaces characters in the input string according to the dictionary.
-        """
-        replaced_string = ""
-        for char in input_string:
-            if char in char_dict:
-                replaced_string += str(char_dict[char])
-            else:
-                replaced_string += char
-        return replaced_string
 
     def check_equation(self, input_string):
         """
@@ -142,8 +134,9 @@ class CustomConstraint(Constraint[str, int]):
             return False
 
         if len(assignment) == len(self.letters):
-            modified_equation = self.replace_characters(self.equation, assignment)
-            # print(modified_equation)
+            modified_equation = self.equation
+            for var, value in assignment.items():
+                modified_equation = modified_equation.replace(var, str(value))
             return self.check_equation(modified_equation)
 
         return True  # no conflict
@@ -153,24 +146,7 @@ def extract_unique_letters(input_string):
     """
     Extracts unique letters from the input string (excluding '+', '*', '-', '=', and duplicates).
     """
-    letters = []
-    for char in input_string:
-        if char.isalpha() and char not in ('+', '*', '-', '=') and char not in letters:
-            letters.append(char)
-    return letters
-
-
-def extract_first_chars(input_equation):
-    # Split the equation into left-hand side and right-hand side
-    lhs, rhs = input_equation.split("=")
-
-    # Extract the first character of each word from both sides and combine into a single list
-    all_first_chars = [word[0] for word in lhs.split() + rhs.split() if word[0].isalpha()]
-
-    # Remove duplicates by converting the list to a set and then back to a list
-    unique_first_chars = list(set(all_first_chars))
-
-    return unique_first_chars
+    return set(char for char in input_string if char.isalpha() and char not in ('+', '*', '-', '='))
 
 
 class CSPSolver:
@@ -182,9 +158,9 @@ class CSPSolver:
         current_script_path = os.path.abspath(__file__)
         # Extract the directory from the script path
         current_folder = os.path.dirname(current_script_path)
-        
-        self.input_file = current_folder + "\\testcases\\input\\" + input_file
-        self.output_file = current_folder + "\\testcases\\output\\" + output_file
+
+        self.input_file = os.path.join(current_folder, "testcases", "input", input_file)
+        self.output_file = os.path.join(current_folder, "testcases", "output", output_file)
 
         # Clear output file
         with open(self.output_file, 'w') as file:
@@ -194,16 +170,12 @@ class CSPSolver:
         """
         Read the input equation from 'input.txt'.
         """
-        input_equation = []
         try:
             with open(self.input_file, 'r') as file:
-                for equation in file:
-                    input_equation.append(equation.strip())
+                return [equation.strip() for equation in file]
         except:
             print("please create input.txt!")
             exit(0)
-
-        return input_equation
 
     def write_output(self, solution):
         """
@@ -230,15 +202,13 @@ class CSPSolver:
         Read the input equation, solve the CSP, and write the output to 'output.txt'.
         """
         input_equations = self.read_input()
-        print(input_equations)
         for input_equation in input_equations:
-            # print(input_equation)
             letters = extract_unique_letters(input_equation)
-            possible_digits = {letter: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] for letter in letters}
+            possible_digits = {letter: set(range(10)) for letter in letters}
 
-            unique_first_chars = extract_first_chars(input_equation)
+            unique_first_chars = extract_unique_letters(input_equation)
             for letter in unique_first_chars:
-                possible_digits[letter] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                possible_digits[letter] = set(range(1, 10))
 
             csp = CSP(letters, possible_digits)
             csp.add_constraint(CustomConstraint(input_equation))
@@ -246,7 +216,8 @@ class CSPSolver:
 
             self.write_output(solution)
 
+
 if __name__ == "__main__":
-    print("please wait for a second!")
+    print("Please wait for a second!")
     solver = CSPSolver()
     solver.solve_csp()

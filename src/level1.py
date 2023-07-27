@@ -213,7 +213,7 @@ try:
     open(file_name, 'w')
 
     for string in string_list:
-        print(string)
+        # print(string)
         analy_string(string)
 
 except FileNotFoundError:
