@@ -2,8 +2,6 @@ import os
 import sys
 import itertools
 
-solution_found = False
-
 def analy_string(str):
     operands = list()
     sign=1
@@ -49,29 +47,26 @@ def analy_string(str):
                 break
 
     alphab = dict(sorted(alphab.items()))
-    for i in range(maxsize):
-        matrix[n][i]=result[i]
-    checkcolumn(0,matrix,0,alphab,sign,n,num)
-
-    # showresult(0,None)
+    j=len(result)-1
+    for i in range(maxsize-1,-1,-1):
+        if(j>=0):
+            matrix[n][i]=result[j]
+            j=j-1
+    t = checkcolumn(0,matrix,0,alphab,sign,n,num)
+    if(t==-1):
+        showresult(0,None)
 
 def checkcolumn(col,matrix,debt,alphab,sign,n,num):
-    global solution_found
-
     if(col == len(matrix[0])):
-        showresult(1,alphab)
-        solution_found = True
-    
-    if solution_found == True:
-        return 0
-    
+        showresult(1, alphab)
+        return 1
     num_operands=0
     con=[]
     unknow_al=[]
     al_copy = {}
     for i in range(n):
         oper = 1
-        if(sign==-1):
+        if(sign==-1 and i>0):
             oper=-1
         if('A' <= matrix[i][col] <='Z'):
             num_operands+=1
@@ -86,21 +81,20 @@ def checkcolumn(col,matrix,debt,alphab,sign,n,num):
                 al_copy[matrix[i][col]] = oper
             if(alphab[matrix[i][col]] == -1 and matrix[i][col] not in unknow_al):
                 unknow_al.append(matrix[i][col])
-            if(matrix[i][col] in unknow_al and al_copy[matrix[i][col]] == 0):
-                unknow_al.remove(matrix[i][col])
     al_copy=dict(sorted(al_copy.items()))
 
-    #nếu cột đó chỉ có đúng dòng kết quả có chữ => chữ kếtt quả là sinh ra từ phép toán ở cột kế bên
+    #nếu cột đó chỉ có đúng dòng kết quả có chữ => chữ kết quả là sinh ra từ phép toán ở cột kế bên
     if(num_operands==0):
         index=1
         while (index<n):
             alphab[matrix[n][col]] = index
             num[index]=False
-            if not solution_found:
-                checkcolumn(col+1,matrix,-index,alphab,sign,n,num)
+            t = checkcolumn(col+1,matrix,-index,alphab,sign,n,num)
+            if(t==1):
+                return t
             num[index]=True
             index+=1
-        return
+        return -1
 
     res = matrix[n][col]
 
@@ -137,8 +131,12 @@ def checkcolumn(col,matrix,debt,alphab,sign,n,num):
                 alphab, num = remove(alphab, mapping, num)
                 continue
             else:
-                checkcolumn(col+1,matrix,check_goal,alphab,sign,n,num)
+                t = checkcolumn(col+1,matrix,check_goal,alphab,sign,n,num)
+                if(t==1):
+                    return 1
                 alphab, num = remove(alphab, mapping, num)
+
+    return -1
 
 def add_to_check(alphab,mapping,num):
     for c in mapping:
@@ -182,45 +180,45 @@ current_folder = os.path.dirname(current_script_path)
 input_file = current_folder + "\\testcases\\input\\input1.txt"
 output_file = current_folder + "\\testcases\\output\\output1.txt"
 
-# with open(output_file, "w") as file:
-#     file.write("")
-
-print(input_file)
-
-def showresult(t, res):
-    # Function to write the result to an output file
-    global output_file
+def showresult(t,res):
     file_name = output_file
     try:
-        with open(file_name, "a") as file:
-            if t == 0:  # If no solution is found
-                file.write("NO SOLUTION")
+        with open(file_name, 'a') as file:
+            if(t==0): #mean no solution found
+                file.write("NO SOLUTION\n")
             else:
                 for c in res:
-                    if c != ".":
-                        file.write(c)
+                    if (c != '.'):
+                        num = str(c)
+                        file.write(num)
                 file.write("=")
                 for c in res:
-                    if c != ".":
+                    if (c != '.'):
                         num = str(res[c])
                         file.write(num)
-
-                file.write("\n")
+                file.write('\n')
 
     except IOError:
         print("An error occurred while writing to the file.")
 
+
 file_name = input_file
 try:
-    with open(file_name, "r") as file:
+    with open(file_name, 'r') as file:
+        case_tests = file.readlines()
+        string_list = [case.strip() for case in case_tests]
 
-        for line in file:
-            solution_found = False
-            string_input = line.strip()
-            print(string_input)
-            analy_string(string_input)
+    # create and reset output file
+    file_name = output_file
+    open(file_name, 'w')
+
+    for string in string_list:
+        print(string)
+        analy_string(string)
 
 except FileNotFoundError:
     print("File not found. Please check the file path.")
 except IOError:
     print("An error occurred while reading the file.")
+
+

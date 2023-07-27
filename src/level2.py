@@ -47,18 +47,19 @@ def analy_string(str):
                 break
 
     alphab = dict(sorted(alphab.items()))
-    for i in range(maxsize):
-        matrix[n][i]=result[i]
-    #for i in range(n):
-    #    print(matrix[i])
-    #print(matrix[n])
-    checkcolumn(0,matrix,0,alphab,operators,n,num)
-    showresult(0,None)
+    j = len(result) - 1
+    for i in range(maxsize - 1, -1, -1):
+        if (j >= 0):
+            matrix[n][i] = result[j]
+            j = j - 1
+    t=checkcolumn(0,matrix,0,alphab,operators,n,num)
+    if(t==-1):
+        return showresult(0,None)
 
 def checkcolumn(col,matrix,debt,alphab,operators,n,num):
     if(col == len(matrix[0])):
         showresult(1,alphab)
-        sys.exit(0)
+        return 1
     num_operands=0
     con=[]
     unknow_al=[]
@@ -80,8 +81,7 @@ def checkcolumn(col,matrix,debt,alphab,operators,n,num):
                 al_copy[matrix[i][col]] = oper
             if(alphab[matrix[i][col]] == -1 and matrix[i][col] not in unknow_al):
                 unknow_al.append(matrix[i][col])
-            if(matrix[i][col] in unknow_al and al_copy[matrix[i][col]] == 0):
-                unknow_al.remove(matrix[i][col])
+
     al_copy=dict(sorted(al_copy.items()))
 
     #nếu cột đó chỉ có đúng dòng kết quả có chữ => chữ kếtt quả là sinh ra từ phép toán ở cột kế bên
@@ -90,10 +90,12 @@ def checkcolumn(col,matrix,debt,alphab,operators,n,num):
         while (index<n):
             alphab[matrix[n][col]] = index
             num[index]=False
-            checkcolumn(col+1,matrix,-index,alphab,operators,n,num)
+            t = checkcolumn(col+1,matrix,-index,alphab,operators,n,num)
+            if(t==1):
+                return t
             num[index]=True
             index+=1
-        return
+        return -1
 
     res = matrix[n][col]
 
@@ -115,35 +117,28 @@ def checkcolumn(col,matrix,debt,alphab,operators,n,num):
     unique_digits = set(range(10))
     available_digits = [digit for digit, can_assign in zip(unique_digits, num) if can_assign]
 
-    mappings = []
     for permutation in itertools.permutations(available_digits, len(unknow_al)):
         mapping = dict(zip(unknow_al, permutation))
         if all(mapping[char] == digit for char, digit in zip(unknow_al, permutation) if digit):
-            #lúc này đã tạo đc 1 tập hợp số mẫu, ta đem đi test phép toán có đúng ko bằng hàm check
-            #hàm check sẽ trả ra 3 kiểu kết quả tương ứng với 3 số:
-            #0: phép toán đúng => ta nhảy tới bước tiếp theo
-            #số âm: phép toán sai nhưng có thể sửa được vì phép toán vế trái  bé hơn vế phải kết quả đủ số để lấp (VD 8=9? => 8+1=9) cái này xuất hiện nếu giả sử phép toán cột kế tiếp cộng dư 1 đơn vị
-            #số dương: phép toán sai nhưng có thể sửa được vì phép toán vế trái  lớn hơn vế phải kết quả đủ số để lấp (VD 9=8 => 9-1=8 => 9=8+1) cái này xuất hiện nếu giả sử phép toán cột kế tiếp cần mượn cột mình để tính
-            #None: HẾT CỨU
-            #print(mapping)
+
             flag=True
             for c in con:
                 if(c in unknow_al and mapping[c]==0):
                     flag=False
                     break
             if(flag==False): continue
-            if(mapping == {'T': 9, 'O': 1}):
-                un=0
-            if(mapping == {'M':2,'S':3,'H':5,'E':0}):
-                un=1
             alphab,num=add_to_check(alphab,mapping,num)
             check_goal=check(alphab,al_copy,res,debt,n)
             if(check_goal==None or (check_goal!=0 and col==len(matrix[0])-1)):
                 alphab, num = remove(alphab, mapping, num)
                 continue
             else:
-                checkcolumn(col+1,matrix,check_goal,alphab,operators,n,num)
+                t = checkcolumn(col+1,matrix,check_goal,alphab,operators,n,num)
+                if(t==1):
+                    return 1
                 alphab, num = remove(alphab, mapping, num)
+
+    return -1
 
 def add_to_check(alphab,mapping,num):
     for c in mapping:
@@ -184,42 +179,47 @@ current_script_path = os.path.abspath(__file__)
 # Extract the directory from the script path
 current_folder = os.path.dirname(current_script_path)
 
-input_file = current_folder + "\\testcases\\input\\input3.txt"
-output_file = current_folder + "\\testcases\\output\\output3.txt"
+input_file = current_folder + "\\testcases\\input\\input2.txt"
+output_file = current_folder + "\\testcases\\output\\output2.txt"
 
-def showresult(t, res):
-    # Function to write the result to an output file
-    global input_file
+def showresult(t,res):
     file_name = output_file
     try:
-        with open(file_name, "a") as file:
-            if t == 0:  # If no solution is found
-                file.write("NO SOLUTION")
+        with open(file_name, 'a') as file:
+            if(t==0): #mean no solution found
+                file.write("NO SOLUTION\n")
             else:
                 for c in res:
-                    if c != ".":
-                        file.write(c)
+                    if (c != '.'):
+                        num = str(c)
+                        file.write(num)
                 file.write("=")
                 for c in res:
-                    if c != ".":
-                        num = str(res[c])
+                    if(c!='.'):
+                        num=str(res[c])
                         file.write(num)
-
-                file.write("\n")
+                file.write('\n')
 
     except IOError:
         print("An error occurred while writing to the file.")
 
+
 file_name = input_file
 try:
-    with open(file_name, "r") as file:
+    with open(file_name, 'r') as file:
+        case_tests = file.readlines()
+        string_list = [case.strip() for case in case_tests]
 
-        for line in file:
-            string_input = line.strip()
-            print(string_input)
-            analy_string(string_input)
+    #create and reset output file
+    file_name = output_file
+    open(file_name, 'w')
+
+    for string in string_list:
+        analy_string(string)
 
 except FileNotFoundError:
     print("File not found. Please check the file path.")
 except IOError:
     print("An error occurred while reading the file.")
+
+
